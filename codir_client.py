@@ -65,6 +65,7 @@ class ClientThread(threading.Thread):
 
 		z = zipfile.ZipFile(path + '/projects/' + self.shareid + '.zip', 'r')
 		z.extractall(path + '/projects/' + self.shareid + '/')
+		z.close()
 		
 		self.window.set_project_data({'folders': [ {'path': path + '/projects/' + self.shareid + '/'} ] })
 		print ('done')

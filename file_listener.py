@@ -1,13 +1,16 @@
 import sublime, sublime_plugin
-import threading, os, time
+import threading, os, time, zipfile, json, binascii
 from . import codir_client as client
+path = os.path.dirname(os.path.realpath(__file__))
 
 global windows
 windows = {}
 
 class ProjectWatcher(threading.Thread):
-	def __init__(self, window):
+	def __init__(self, window, shareid):
+		self.shareid = shareid
 		self.window = window
+		self.socket = client.sockets[self.window.id()]
 		self.project_data = window.project_data()['folders']
 		self.contents = self.get_contents(self.project_data)
 		self.incoming = False
@@ -48,6 +51,34 @@ class ProjectWatcher(threading.Thread):
 							break
 					if is_root:
 						rem.append(f)
+
+		fp = os.relpath(path + '/projects/' + self.shareid + '/');
+
+		z = zipfile.ZipFile(fp + '.fdeltas.zip', 'w')
+		for f in add:
+			z.write(os.path.relpath(f))
+
+		fdeltas = {'added': {}, 'removed': {}}
+
+		for f in add:
+			if fp in f:
+				index = f.index(path)
+				fdeltas['added'][os.path.basename(f)] = f[index:]
+			else:
+				fdeltas['added'][os.path.basename(f)] = None
+		for f in rem:
+			index = f.index(path)
+			fdeltas['removed'][f[index:]] = None
+		
+		f = open(fp + '.fdeltas.json', 'w')
+		json.dump(fdeltas, f)
+		f.close()
+		z.write(os.path.relpath(fp + '.fdeltas.json'))
+		z.close()
+
+		z = open(fp + '.fdeltas.zip', 'rb')
+		self.socket.emit('workspace-project-edit-update', binascii.hexlify(z.read()))
+		z.close()
 
 		time.sleep(10)
 
