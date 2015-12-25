@@ -5,7 +5,7 @@ from . import codir_client as client
 
 class CodirListener(sublime_plugin.EventListener):
 	def on_modified_async(self, view):
-		if view.window().id() in client.sockets and not history.is_delta(view):
+		if view.window() and view.window().id() in client.sockets and not history.is_delta(view) and view.file_name():
 			history.buffer_history[view.id()].append(view.substr(sublime.Region(0, view.size())))
 
 			socket = client.sockets[view.window().id()]
