@@ -69,8 +69,12 @@ class ClientThread(threading.Thread):
 		z = zipfile.ZipFile(path + '/projects/' + self.shareid + '.zip', 'r')
 		z.extractall(path + '/projects/' + self.shareid + '/')
 		z.close()
+
+		folders = []
+		folders += [{'path': path + '/projects/' + self.shareid + '/' + f} for f in os.listdir(path + '/projects/' + self.shareid + '/') if '.DS_Store' not in f]
 		
-		self.window.set_project_data({'folders': [ {'path': path + '/projects/' + self.shareid + '/'} ] })
+		#self.window.set_project_data({'folders': [ {'path': path + '/projects/' + self.shareid + '/'} ] })
+		self.window.set_project_data({'folders': folders })
 		windows[self.window.id()] = ProjectWatcher(self.window, self.shareid)
 		windows[self.window.id()].start()
 		print ('done')
@@ -114,7 +118,7 @@ class ProjectWatcher(threading.Thread):
 			self.contents = after
 
 			if before == after:
-				time.sleep(5)
+				#time.sleep(5)
 				continue
 			print('test')
 			#added = [f for f in after if not f in before]
@@ -164,14 +168,17 @@ class ProjectWatcher(threading.Thread):
 				fdeltas = {'added': {}, 'removed': {}}
 
 				for f in add:
-					if fp in f:
-						index = f.index(path)
-						fdeltas['added'][os.path.basename(f)] = f[index:]
-					else:
-						fdeltas['added'][os.path.basename(f)] = None
+					if path in f:
+						prefix = os.path.join(path, 'projects', self.shareid)
+						index = f.index(prefix)
+						print(os.path.dirname(f)[index+len(prefix):])
+						fdeltas['added'][os.path.basename(f)] = os.path.dirname(f)[index+len(prefix):]
+					# else:
+					# 	fdeltas['added'][os.path.basename(f)] = None
 				for f in rem:
-					index = f.index(path)
-					fdeltas['removed'][f[index:]] = None
+					prefix = os.path.join(path, 'projects', self.shareid)
+					index = f.index(prefix)
+					fdeltas['removed'][f[index+len(prefix):]] = None
 				
 				f = open(fp + '.fdeltas.json', 'w')
 				json.dump(fdeltas, f)
@@ -180,8 +187,7 @@ class ProjectWatcher(threading.Thread):
 				z.close()
 
 				z = open(fp + '.fdeltas.zip', 'rb')
-
-				emit = str(binascii.hexlify(z.read()))[2:-1]
+				emit = str(binascii.hexlify(z.read()))
 				print(emit)
 				self.socket.emit('workspace-project-edit-update', emit)
 
@@ -189,6 +195,7 @@ class ProjectWatcher(threading.Thread):
 
 				os.remove(fp + '.fdeltas.json')
 				os.remove(fp + '.fdeltas.zip')
+				# self.incoming = True
 
 	def get_contents(self, folders):
 		ret = []
