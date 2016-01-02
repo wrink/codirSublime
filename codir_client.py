@@ -34,16 +34,17 @@ class ClientThread(threading.Thread):
 		self.window = sublime.active_window()
 
 		host, port = self.shareid.split(':')
-		print ('test0')
+
 		self.socket = SocketIO(host, int(port), LoggingNamespace)
-		print ('test1')
 		
 		self.socket.on('live-file-connection', self.download)
 
 		self.socket.on('workspace-file-edit-update', self.apply)
 
 		self.socket.on('workspace-open-file-update', self.apply_all)
-		print ('test2')
+
+		self.socket.on('workspace-project-edit-update', self.replace)
+
 		self.socket.emit('live-file-connection', '')
 		while True:
 			self.socket.wait(seconds=1)
@@ -99,6 +100,24 @@ class ClientThread(threading.Thread):
 				if path in filename and filename.index(path) + len(path) == len(filename):
 					view.run_command('apply_deltas', {'deltas': delta})
 
+	def replace(self, fdeltas):
+		f = open(fp + '/' + self.shareid + '.zip', 'wb+')
+		f.write(bytes.fromhex(file['zip']))
+		f.close()
+
+		if not os.path.exists(path + '/projects'):
+			os.makedirs(path + '/projects/' + self.shareid)
+
+		z = zipfile.ZipFile(path + '/projects/' + self.shareid + '.zip', 'r')
+		guide = json.loads(z.read('.fdeltas.json').decode('utf-8'))
+
+		for rem in guide.removed:
+			#TODO
+			print('TODO')
+
+		z.close()
+		
+
 class ProjectWatcher(threading.Thread):
 	def __init__(self, window, shareid):
 		self.shareid = shareid
@@ -118,9 +137,8 @@ class ProjectWatcher(threading.Thread):
 			self.contents = after
 
 			if before == after:
-				#time.sleep(5)
+				time.sleep(5)
 				continue
-			print('test')
 			#added = [f for f in after if not f in before]
 			#removed = [f for f in before if not f in after]
 			added, removed = [], []
@@ -150,6 +168,8 @@ class ProjectWatcher(threading.Thread):
 							break
 					if is_root:
 						rem.append(f)
+				print(add)
+				print(rem)
 
 				fp = os.path.relpath(path + '/projects/' + self.shareid) + '/';
 
@@ -172,7 +192,7 @@ class ProjectWatcher(threading.Thread):
 						prefix = os.path.join(path, 'projects', self.shareid)
 						index = f.index(prefix)
 						print(os.path.dirname(f)[index+len(prefix):])
-						fdeltas['added'][os.path.basename(f)] = os.path.dirname(f)[index+len(prefix):]
+						fdeltas['added'][f[index+len(prefix):]] = os.path.dirname(f)[index+len(prefix):]
 					# else:
 					# 	fdeltas['added'][os.path.basename(f)] = None
 				for f in rem:
