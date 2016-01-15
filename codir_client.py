@@ -118,7 +118,7 @@ class ProjectWatcher(threading.Thread):
 			self.contents = after
 
 			if before == after:
-				#time.sleep(5)
+				time.sleep(1)
 				continue
 			print('test')
 			#added = [f for f in after if not f in before]
@@ -172,7 +172,7 @@ class ProjectWatcher(threading.Thread):
 						prefix = os.path.join(path, 'projects', self.shareid)
 						index = f.index(prefix)
 						print(os.path.dirname(f)[index+len(prefix):])
-						fdeltas['added'][os.path.basename(f)] = os.path.dirname(f)[index+len(prefix):]
+						fdeltas['added'][f[index+len(prefix):]] = os.path.dirname(f)[index+len(prefix):]
 					# else:
 					# 	fdeltas['added'][os.path.basename(f)] = None
 				for f in rem:
